@@ -14,7 +14,7 @@ To run them, you will need to install some additional dependencies:
 You can now run the following examples:
 
 - [Iris dataset](http://archive.ics.uci.edu/ml/datasets/Iris/)
-  - A single dense layer model: `python -m experiments.iris simple`
+  - A single dense layer model: `python -m experiments.iris dense`
   - A neural network with a 20-node hidden layer: `python -m experiments.iris hidden`
 - [MNIST dataset](http://yann.lecun.com/exdb/mnist/)
   - A convolutional model `python -m experiments.convolutional`
