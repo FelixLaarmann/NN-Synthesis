@@ -29,13 +29,15 @@ from clsp.enumeration import interpret_term
 
 class Base_Repository:
 
-    def __init__(self, learning_rates: list[float], min_layers: int, max_layers: int, min_neurons: int,
-                 max_neurons: int, train_input, train_labels):
+    def __init__(self, learning_rates: list[float],
+                 input_neurons: int, output_neurons: int,
+                 hidden_layers: [int], hidden_neurons: [int],
+                 train_input, train_labels):
         self.learning_rates = learning_rates
-        self.max_layers = [*range(1, max_layers + 1, 1)]
-        self.min_layers = min_layers
-        self.shapes = list(product([*range(min_neurons, max_neurons + 1, 1)],
-                                   [*range(min_neurons, max_neurons + 1, 1)]))
+        self.min_layers = min(hidden_layers)
+        self.max_layers = [*range(0, self.min_layers, 1)] + hidden_layers #[*range(1, max_layers + 1, 1)]
+        self.shapes = list(product([input_neurons, output_neurons] + hidden_neurons,
+                                   [input_neurons, output_neurons] + hidden_neurons))
         self.train_input = train_input
         self.train_labels = train_labels
 
@@ -92,7 +94,7 @@ class Base_Repository:
             .Use("wf", "initialization_feature")
             .Use("s", "shape")
             .Use("_input", Constructor("Layer") & Constructor("Dense", LVar("s") & LVar("af") & LVar("wf")))
-            .In(Constructor("Model", Literal(1, "layer") & LVar("s") & LVar("af") & LVar("wf"))),
+            .In(Constructor("Model", Literal(0, "layer") & LVar("s") & LVar("af") & LVar("wf"))),
             "Network_Dense": DSL()
             .Use("af", "activation_feature")
             .Use("wf", "initialization_feature")

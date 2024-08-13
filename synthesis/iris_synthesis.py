@@ -28,21 +28,25 @@ def main(iris_data) -> None:
     # Load data from CSV
     train_input, train_labels = load_iris(iris_data)
 
-    base = Base_Repository([-0.01], 1, 3, 2, 30,
+    base = Base_Repository([-0.01], 4, 3,
+                           [0, 1, 2], [*range(15, 25, 1)],
                            train_input, train_labels)
 
-    target = Constructor("Experiment", Literal(1, "layer") & Literal((4, 3), "shape"))
+    print(base.delta())
 
-    print(target)
+    print("#############################\n#############################\n\n")
+
+    target = Constructor("Learner", Literal((4, 3), "shape"))
+
+    print(f"target: {target}")
 
     fcl = FiniteCombinatoryLogic(base.gamma(), Subtypes({}), base.delta())
-    print("Start Inhabitation")
 
     results = fcl.inhabit(target)
 
-    print("finished inhabitation")
+    terms = enumerate_terms(target, results, max_count=100000)
 
-    terms = enumerate_terms(target, results, max_count=1000)
+    print(f"Number of results: {len(list(enumerate_terms(target, results, max_count=100000)))}")
 
     term_number = 1
 
