@@ -81,11 +81,4 @@ if __name__ == "__main__":
                 del images, labels, outputs
         
             print('Accuracy of the network on the {} validation images: {} %'.format(5000, 100 * correct / total)) 
-
         
-
-
-
-
-
-
