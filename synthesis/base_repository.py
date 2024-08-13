@@ -5,6 +5,9 @@ import pandas as pd
 import numpy as np
 import argparse
 
+import torch 
+import torch.nn as nn 
+
 import numeric_optics.para
 from experiments.dataset import load_iris
 
@@ -44,9 +47,9 @@ class Base_Repository:
     def delta(self) -> dict[str, list[Any]]:
         return {
             "learning_rate": self.learning_rates,
-            "learning_rate_feature": ["Constant", "RDA"],
-            "loss_feature": ["MSE"],
-            "update_feature": ["Momentum", "Gradient_Descent", "RDA"],
+            "learning_rate_feature": ["Constant"],
+            "loss_feature": ["MSE", "CEL"],
+            "update_feature": ["SGD"],
             "activation_feature": ["Sigmoid", "ReLu"],
             "initialization_feature": ["Glotrot_Uniform", "Glotrot_Normal", "Normal"],
             "layer": self.max_layers,
@@ -58,18 +61,19 @@ class Base_Repository:
             "Learning_Rate": DSL()
             .Use("lr", "learning_rate")
             .In(Constructor("Learning_Rate", Literal("Constant", "learning_rate_feature") & LVar("lr"))),
-            "Learning_Rate_RDA": DSL()
-            .Use("lr", "learning_rate")
-            .In(Constructor("Learning_Rate", Literal("RDA", "learning_rate_feature") & LVar("lr"))),
+            # "Learning_Rate_RDA": DSL()
+            # .Use("lr", "learning_rate")
+            # .In(Constructor("Learning_Rate", Literal("RDA", "learning_rate_feature") & LVar("lr"))),
             "Loss_MSE": Constructor("Loss", Literal("MSE", "loss_feature")),
-            "Update_RDA": Constructor("Update", Literal("RDA", "update_feature")),
-            "Update_RDA_Momentum": Constructor("Update",
-                                               Literal("RDA", "update_feature") &
-                                               Literal("Momentum", "update_feature")),
-            "Update_GradientDescent": Constructor("Update", Literal("Gradient_Descent", "update_feature")),
-            "Update_GradientDescent_Momentum": Constructor("Update",
-                                                           Literal("Gradient_Descent", "update_feature") &
-                                                           Literal("Momentum", "update_feature")),
+            "Loss_CEL": Constructor("Loss", Literal("CEL", "loss_feature")),
+            "Update_SGD": Constructor("Update", Literal("SGD", "update_feature")),
+            #"Update_RDA_Momentum": Constructor("Update",
+            #                                   Literal("RDA", "update_feature") &
+            #                                   Literal("Momentum", "update_feature")),
+            #"Update_GradientDescent": Constructor("Update", Literal("Gradient_Descent", "update_feature")),
+            #"Update_GradientDescent_Momentum": Constructor("Update",
+            #                                               Literal("Gradient_Descent", "update_feature") &
+            #                                               Literal("Momentum", "update_feature")),
             "Activation_Sigmoid": Constructor("Activation", Literal("Sigmoid", "activation_feature")),
             "Activation_ReLu": Constructor("Activation", Literal("ReLu", "activation_feature")),
             "Weights_Initial_Normal": Constructor("Weights",
@@ -80,7 +84,8 @@ class Base_Repository:
             "Weights_Initial_Glotrot": Constructor("Weights",
                                                    Constructor("Random") &
                                                    Literal("Glotrot_Normal", "initialization_feature")),
-            "Bias": Constructor("Bias"),
+            "Bias_True": Constructor("Bias"),
+            "Bias_False": Constructor("Bias"),
             "Layer_Dense": DSL()
             .Use("s", "shape")
             .Use("af", "activation_feature")
@@ -168,18 +173,20 @@ class Base_Repository:
     def para_lens_algebra(self):
         return {
             "Learning_Rate": (lambda n: to_para(learning_rate(n))),
-            "Learning_Rate_RDA": (lambda n: to_para(rda_learning_rate(n))),
+            #"Learning_Rate_RDA": (lambda n: to_para(rda_learning_rate(n))),
             "Loss_MSE": Para(mse_loss),
-            "Update_RDA": rda,
-            "Update_RDA_Momentum": rda_momentum(-0.1),
-            "Update_GradientDescent": gd(-0.01),
-            "Update_GradientDescent_Momentum": momentum(-0.01, -0.1),
+            "Loss_CEL": Para(mse_loss),
+            "Update_SGD": rda,
+            # "Update_RDA_Momentum": rda_momentum(-0.1),
+            # "Update_GradientDescent": gd(-0.01),
+            # "Update_GradientDescent_Momentum": momentum(-0.01, -0.1),
             "Activation_Sigmoid": to_para_init(lens.sigmoid),
             "Activation_ReLu": to_para_init(lens.relu),
             "Weights_Initial_Normal": normal(0, 0.01),
             "Weights_Initial_GlotrotUniform": glorot_uniform,
             "Weights_Initial_Glotrot": glorot_normal,
-            "Bias": numeric_optics.para.bias,
+            "Bias_True": numeric_optics.para.bias,
+            "Bias_False": numeric_optics.para.bias,
             "Layer_Dense": self.layer_dense,
             "Network_Dense_Start": (lambda af, wf, s, l: l),
             "Network_Dense": (lambda af, wf, m, n, s1, s2, s3, layer, model: layer >> model),
@@ -187,3 +194,46 @@ class Base_Repository:
                         (supervised_step(net, upd, loss, rate), net)),
             "Experiment": (lambda n, s, lr, lrf, lf, uf, af, wf, x: x),
         }
+    
+    def build_pytorch(self, n, s, lr, lrf, lf, uf, af, wf, rate, loss, upd, net):
+        class IrisExample(nn.Module):
+            def __init__(self, input_, output_):
+                super(IrisExample, self).__init__()
+                
+                for l, w in zip(net[0], net[1]):
+                    if isinstance(l, nn.Linear):
+                        w(l.weight.data)
+                self.layers = nn.Sequential(*net[0])    
+
+
+            def forward(self, x):
+                return self.layers(x)
+        model = IrisExample(s[0], s[1])
+        return model, loss, upd(model.parameters(), rate)
+    
+    #TODO: RDA is now torch.SGD, update repository!
+    
+    def pytorch_algebra(self):
+        return {
+            "Learning_Rate": (lambda n: n),
+            #"Learning_Rate_RDA": (lambda n: to_para(rda_learning_rate(n))),
+            "Loss_MSE": nn.MSELoss(),
+            "Loss_CEL": nn.CrossEntropyLoss(),
+            "Update_SGD": (lambda param, rate: torch.optim.SGD(param, lr=rate, weight_decay = 0.001, momentum = 0.9)),
+            # "Update_RDA_Momentum": rda_momentum(-0.1),
+            # "Update_GradientDescent": gd(-0.01),
+            # "Update_GradientDescent_Momentum": momentum(-0.01, -0.1),
+            "Activation_Sigmoid": nn.Sigmoid(),
+            "Activation_ReLu": nn.ReLU(),
+            "Weights_Initial_Normal": nn.init.normal_,
+            "Weights_Initial_GlotrotUniform": nn.init.xavier_uniform_,
+            "Weights_Initial_Glotrot": nn.init.xavier_normal_,
+            "Bias_True": True,
+            "Bias_False": False,
+            "Layer_Dense": (lambda shape, af, wf, activation, weights, bias:  ([nn.Linear(shape[0], shape[1], bias=bias), activation], [weights])), # nn.Sequential(nn.Linear(shape[0], shape[1], bias=bias)).apply(weights).append(activation) ),#
+            "Network_Dense_Start": (lambda af, wf, s, l: l),
+            "Network_Dense": (lambda af, wf, m, n, s1, s2, s3, layer, model: (layer[0] + model[0], layer[1] + model[1])), # layer.append(model)), 
+            "Learner": self.build_pytorch,
+            "Experiment": (lambda n, s, lr, lrf, lf, uf, af, wf, x: x),
+        }
+
