@@ -8,7 +8,7 @@ def normal(mean=0, stddev=0.01):
 
 # eq (16) http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf
 def glorot_uniform(shape):
-    bound = np.sqrt(6) / np.sqrt(np.product(shape))
+    bound = np.sqrt(6) / np.sqrt(np.prod(shape))
     return np.random.uniform(-bound, bound, shape)
 
 # http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf
