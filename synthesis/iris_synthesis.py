@@ -4,7 +4,7 @@ import sys
 import pandas as pd
 import numpy as np
 import argparse
-from synthesis.base_repository import Base_Repository
+from synthesis.linear_repository import Linear_Repository
 
 from experiments.dataset import load_iris
 
@@ -28,9 +28,9 @@ def main(iris_data) -> None:
     # Load data from CSV
     train_input, train_labels = load_iris(iris_data)
 
-    base = Base_Repository([-0.01], 4, 3,
-                           [0, 1, 2], [*range(15, 25, 1)],
-                           train_input, train_labels)
+    base = Linear_Repository([-0.01], 4, 3,
+                             [0, 1, 2], [*range(15, 25, 1)],
+                             train_input, train_labels)
 
     print(base.delta())
 

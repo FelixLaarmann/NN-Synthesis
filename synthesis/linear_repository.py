@@ -1,20 +1,13 @@
 #!/usr/bin/env python
 
-import sys
-import pandas as pd
-import numpy as np
-import argparse
-
 import numeric_optics.para
-from experiments.dataset import load_iris
 
 from itertools import product
 
 import numeric_optics.lens as lens
-from numeric_optics.para import Para, to_para, dense, linear, to_para_init
-from numeric_optics.supervised import train_supervised, supervised_step, mse_loss, learning_rate, rda_learning_rate
+from numeric_optics.para import Para, to_para, linear, to_para_init
+from numeric_optics.supervised import supervised_step, mse_loss, learning_rate, rda_learning_rate
 from numeric_optics.update import gd, rda, rda_momentum, momentum
-from numeric_optics.statistics import accuracy
 from numeric_optics.initialize import normal, glorot_normal, glorot_uniform
 
 from typing import Any
@@ -24,10 +17,9 @@ from clsp import (
     LVar,
 )
 from clsp.types import Literal
-from clsp.enumeration import interpret_term
 
 
-class Base_Repository:
+class Linear_Repository:
 
     def __init__(self, learning_rates: list[float],
                  input_neurons: int, output_neurons: int,
@@ -35,7 +27,7 @@ class Base_Repository:
                  train_input, train_labels):
         self.learning_rates = learning_rates
         self.min_layers = min(hidden_layers)
-        self.max_layers = [*range(0, self.min_layers, 1)] + hidden_layers #[*range(1, max_layers + 1, 1)]
+        self.max_layers = [*range(0, self.min_layers, 1)] + hidden_layers  # [*range(1, max_layers + 1, 1)]
         self.shapes = list(product([input_neurons, output_neurons] + hidden_neurons,
                                    [input_neurons, output_neurons] + hidden_neurons))
         self.train_input = train_input
@@ -125,44 +117,10 @@ class Base_Repository:
             .In(Constructor("Learner",
                             LVar("lrf") & LVar("lr") & LVar("lf") & LVar("uf") &
                             LVar("n") & LVar("s") & LVar("af") & LVar("wf"))),
-            "Experiment": DSL()
-            .Use("n", "layer")
-            .With(lambda n: n >= self.min_layers)
-            .Use("s", "shape")
-            .Use("lr", "learning_rate")
-            .Use("lrf", "learning_rate_feature")
-            .Use("lf", "loss_feature")
-            .Use("uf", "update_feature")
-            .Use("af", "activation_feature")
-            .Use("wf", "initialization_feature")
-            .Use("learner", Constructor("Learner",
-                                        LVar("lrf") & LVar("lr") & LVar("lf") & LVar("uf") &
-                                        LVar("n") & LVar("s") & LVar("af") & LVar("wf")))
-            .With(lambda learner: self.test_term(learner, 0.9))
-            .In(Constructor("Experiment",
-                            LVar("lrf") & LVar("lr") & LVar("lf") & LVar("uf") &
-                            LVar("n") & LVar("s") & LVar("af") & LVar("wf"))),
         }
 
-    def test_term(self, term, min_accuracy):
-        (step, param), model = interpret_term(term, self.para_lens_algebra())
-        e_prev = None
-        fwd = model.arrow.arrow.fwd
-        acc = 0.0
-        for e, j, i, param in train_supervised(step, param, self.train_input, self.train_labels, num_epochs=400,
-                                               shuffle_data=True):
-            # print accuracy diagnostic every epoch
-            if e == e_prev:
-                continue
-
-            e_prev = e
-            predict = lambda x: fwd((param[1], x)).argmax()
-            acc = accuracy(predict, self.train_input, self.train_labels.argmax(axis=1))
-            #print('epoch', e + 1, '\ttraining accuracy {0:.4f}'.format(acc), end='\r')
-        #print('epoch', e + 1, '\ttraining accuracy {0:.4f}'.format(acc))
-        return min_accuracy <= acc
-
-    def layer_dense(self, shape, af, wf, activation, weights, bias):
+    @staticmethod
+    def layer_dense(shape, af, wf, activation, weights, bias):
         return linear(shape, weights) >> bias(shape[1]) >> activation
 
     def para_lens_algebra(self):
@@ -185,5 +143,4 @@ class Base_Repository:
             "Network_Dense": (lambda af, wf, m, n, s1, s2, s3, layer, model: layer >> model),
             "Learner": (lambda n, s, lr, lrf, lf, uf, af, wf, rate, loss, upd, net:
                         (supervised_step(net, upd, loss, rate), net)),
-            "Experiment": (lambda n, s, lr, lrf, lf, uf, af, wf, x: x),
         }
