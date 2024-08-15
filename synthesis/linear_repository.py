@@ -96,8 +96,8 @@ class Linear_Repository:
             .Use("wf", "initialization_feature")
             .Use("s", "shape")
             .Use("_input", Constructor("Layer") & Constructor("Dense", LVar("s") & LVar("af") & LVar("wf")))
-            .In(Constructor("Model", Literal(0, "layer") & LVar("s") & LVar("af") & LVar("wf"))),
-            "Network_Dense": DSL()
+            .In(Constructor("Model_Dense", Literal(0, "layer") & LVar("s") & LVar("af") & LVar("wf"))),
+            "Network_Dense_Cons": DSL()
             .Use("af", "activation_feature")
             .Use("wf", "initialization_feature")
             .Use("m", "layer")
@@ -108,9 +108,9 @@ class Linear_Repository:
             .Use("s3", "shape")
             .With(lambda s1, s2, s3: s3[0] == s1[0] and s1[1] == s2[0] and s3[1] == s2[1])
             .Use("layer", Constructor("Layer") & Constructor("Dense", LVar("s1") & LVar("af") & LVar("wf")))
-            .Use("model", Constructor("Model", LVar("n") & LVar("s2") & LVar("af") & LVar("wf")))
-            .In(Constructor("Model", LVar("m") & LVar("s3") & LVar("af") & LVar("wf"))),
-            "Learner": DSL()
+            .Use("model", Constructor("Model_Dense", LVar("n") & LVar("s2") & LVar("af") & LVar("wf")))
+            .In(Constructor("Model_Dense", LVar("m") & LVar("s3") & LVar("af") & LVar("wf"))),
+            "Learner_Dense": DSL()
             .Use("n", "layer")
             .With(lambda n: n >= self.min_layers)
             .Use("s", "shape")
@@ -123,7 +123,7 @@ class Linear_Repository:
             .Use("rate", Constructor("Learning_Rate", LVar("lrf") & LVar("lr")))
             .Use("loss", Constructor("Loss", LVar("lf")))
             .Use("upd", Constructor("Update", LVar("uf")))
-            .Use("net", Constructor("Model", LVar("n") & LVar("s") & LVar("af") & LVar("wf")))
+            .Use("net", Constructor("Model_Dense", LVar("n") & LVar("s") & LVar("af") & LVar("wf")))
             .In(Constructor("Learner",
                             LVar("lrf") & LVar("lr") & LVar("lf") & LVar("uf") &
                             LVar("n") & LVar("s") & LVar("af") & LVar("wf"))),
@@ -155,7 +155,6 @@ class Linear_Repository:
             "Network_Dense": (lambda af, wf, m, n, s1, s2, s3, layer, model: layer >> model),
             "Learner": (lambda n, s, lr, lrf, lf, uf, af, wf, rate, loss, upd, net:
                         (supervised_step(net, upd, loss, rate), net)),
-            "Experiment": (lambda n, s, lr, lrf, lf, uf, af, wf, x: x),
         }
     
     def build_pytorch(self, n, s, lr, lrf, lf, uf, af, wf, rate, loss, upd, net):
@@ -203,6 +202,5 @@ class Linear_Repository:
             "Network_Dense_Start": (lambda af, wf, s, l: l),
             "Network_Dense": (lambda af, wf, m, n, s1, s2, s3, layer, model: layer.append(model)), #(layer[0] + model[0], layer[1] + model[1])), #
             "Learner": self.build_pytorch,
-            "Experiment": (lambda n, s, lr, lrf, lf, uf, af, wf, x: x),
         }
 

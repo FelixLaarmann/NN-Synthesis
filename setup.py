@@ -13,6 +13,6 @@ setup(
     version='0.1',
     description='Synthesis of NN',
     author='Laarmann, Felix',
-    author_email='firstname.lastname@tu-dortmund.de',
+    author_email='felix.laarmann@tu-dortmund.de',
     packages=find_packages()
 )
