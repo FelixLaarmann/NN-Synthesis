@@ -4,7 +4,7 @@ import sys
 import pandas as pd
 import numpy as np
 import argparse
-from synthesis.base_repository import Base_Repository
+from synthesis.linear_repository import Linear_Repository
 
 import torch 
 import torch.nn as nn 
@@ -41,7 +41,7 @@ def main(iris_data) -> None:
 
 
 
-    base = Base_Repository([0.01], 4, 3,
+    base = Linear_Repository([0.01], 4, 3,
                            [0, 1], [*range(15, 25, 1)],
                            train_input, train_labels)
 
