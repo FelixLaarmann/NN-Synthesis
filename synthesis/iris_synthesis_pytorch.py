@@ -43,7 +43,8 @@ def main(iris_data) -> None:
 
     base = Linear_Repository([0.01], 4, 3,
                            [0, 1], [*range(15, 25, 1)],
-                           train_input, train_labels)
+                             [["Sigmoid", "Sigmoid", "Sigmoid"], ["ReLu", "ReLu", "ReLu"]],
+                             [["Normal", "Normal", "Normal"]])
 
     print(base.delta())
 

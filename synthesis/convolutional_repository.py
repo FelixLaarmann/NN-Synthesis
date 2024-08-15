@@ -4,12 +4,6 @@ import numeric_optics.para
 
 from itertools import product
 
-import numeric_optics.lens as lens
-from numeric_optics.para import Para, to_para, dense, linear, to_para_init
-from numeric_optics.supervised import train_supervised, supervised_step, mse_loss, learning_rate, rda_learning_rate
-from numeric_optics.update import gd, rda, rda_momentum, momentum
-from numeric_optics.statistics import accuracy
-from numeric_optics.initialize import normal, glorot_normal, glorot_uniform
 from numeric_optics.para.convolution import *
 
 from typing import Any
@@ -18,8 +12,6 @@ from clsp import (
     Constructor,
     LVar,
 )
-from clsp.types import Literal
-from clsp.enumeration import interpret_term
 
 from linear_repository import Linear_Repository
 

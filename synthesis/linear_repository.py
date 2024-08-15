@@ -10,7 +10,7 @@ import torch.nn as nn
 
 import numeric_optics.para
 
-from itertools import product
+from itertools import product, groupby
 
 import numeric_optics.lens as lens
 from numeric_optics.para import Para, to_para, linear, to_para_init
@@ -27,19 +27,33 @@ from clsp import (
 from clsp.types import Literal
 
 
+def tails(ls: list[Any]) -> list[list[Any]]:
+    tl = ls
+    tls = []
+    while tl:
+        tls.append(tl)
+        tl = tl[1:]
+    return tls
+
+
 class Linear_Repository:
 
     def __init__(self, learning_rates: list[float],
                  input_neurons: int, output_neurons: int,
                  hidden_layers: [int], hidden_neurons: [int],
-                 train_input, train_labels):
+                 activation_lists: list[list[str]],
+                 initialization_lists: list[list[str]]):
         self.learning_rates = learning_rates
         self.min_layers = min(hidden_layers)
         self.max_layers = [*range(0, self.min_layers, 1)] + hidden_layers  # [*range(1, max_layers + 1, 1)]
         self.shapes = list(product([input_neurons, output_neurons] + hidden_neurons,
                                    [input_neurons, output_neurons] + hidden_neurons))
-        self.train_input = train_input
-        self.train_labels = train_labels
+        al: list[list[str]] = [l for al in activation_lists for l in tails(al)]
+        al.sort()
+        self.activation_lists = list(tuple(l) for l, _ in groupby(al))
+        il: list[list[str]] = [l for il in initialization_lists for l in tails(il)]
+        il.sort()
+        self.initialization_lists = list(tuple(l) for l, _ in groupby(il))
 
     def delta(self) -> dict[str, list[Any]]:
         return {
@@ -50,7 +64,9 @@ class Linear_Repository:
             "activation_feature": ["Sigmoid", "ReLu"],
             "initialization_feature": ["Glotrot_Uniform", "Glotrot_Normal", "Normal"],
             "layer": self.max_layers,
-            "shape": self.shapes
+            "shape": self.shapes,
+            "activation_list": self.activation_lists,
+            "initialization_list": self.initialization_lists,
         }
 
     def gamma(self):
@@ -93,13 +109,23 @@ class Linear_Repository:
             .In(Constructor("Layer") & Constructor("Dense", LVar("s") & LVar("af") & LVar("wf"))),
             "Network_Dense_Start": DSL()
             .Use("af", "activation_feature")
+            .Use("al", "activation_list")
+            .As(lambda af: (af,))
             .Use("wf", "initialization_feature")
+            .Use("wl", "initialization_list")
+            .As(lambda wf: (wf,))
             .Use("s", "shape")
             .Use("_input", Constructor("Layer") & Constructor("Dense", LVar("s") & LVar("af") & LVar("wf")))
-            .In(Constructor("Model_Dense", Literal(0, "layer") & LVar("s") & LVar("af") & LVar("wf"))),
+            .In(Constructor("Model_Dense", Literal(0, "layer") & LVar("s") & LVar("al") & LVar("wl"))),
             "Network_Dense_Cons": DSL()
             .Use("af", "activation_feature")
+            .Use("atl", "activation_list")
+            .Use("al", "activation_list")
+            .As(lambda af, atl: (af,) + atl)
             .Use("wf", "initialization_feature")
+            .Use("wtl", "initialization_list")
+            .Use("wl", "initialization_list")
+            .As(lambda wf, wtl: (wf,) + wtl)
             .Use("m", "layer")
             .Use("n", "layer")
             .As(lambda m: m - 1)
@@ -108,8 +134,8 @@ class Linear_Repository:
             .Use("s3", "shape")
             .With(lambda s1, s2, s3: s3[0] == s1[0] and s1[1] == s2[0] and s3[1] == s2[1])
             .Use("layer", Constructor("Layer") & Constructor("Dense", LVar("s1") & LVar("af") & LVar("wf")))
-            .Use("model", Constructor("Model_Dense", LVar("n") & LVar("s2") & LVar("af") & LVar("wf")))
-            .In(Constructor("Model_Dense", LVar("m") & LVar("s3") & LVar("af") & LVar("wf"))),
+            .Use("model", Constructor("Model_Dense", LVar("n") & LVar("s2") & LVar("atl") & LVar("wtl")))
+            .In(Constructor("Model_Dense", LVar("m") & LVar("s3") & LVar("al") & LVar("wl"))),
             "Learner_Dense": DSL()
             .Use("n", "layer")
             .With(lambda n: n >= self.min_layers)
@@ -118,15 +144,15 @@ class Linear_Repository:
             .Use("lrf", "learning_rate_feature")
             .Use("lf", "loss_feature")
             .Use("uf", "update_feature")
-            .Use("af", "activation_feature")
-            .Use("wf", "initialization_feature")
+            .Use("al", "activation_list")
+            .Use("wl", "initialization_list")
             .Use("rate", Constructor("Learning_Rate", LVar("lrf") & LVar("lr")))
             .Use("loss", Constructor("Loss", LVar("lf")))
             .Use("upd", Constructor("Update", LVar("uf")))
-            .Use("net", Constructor("Model_Dense", LVar("n") & LVar("s") & LVar("af") & LVar("wf")))
+            .Use("net", Constructor("Model_Dense", LVar("n") & LVar("s") & LVar("al") & LVar("wl")))
             .In(Constructor("Learner",
                             LVar("lrf") & LVar("lr") & LVar("lf") & LVar("uf") &
-                            LVar("n") & LVar("s") & LVar("af") & LVar("wf"))),
+                            LVar("n") & LVar("s") & LVar("al") & LVar("wl"))),
         }
 
     @staticmethod
@@ -151,13 +177,13 @@ class Linear_Repository:
             "Bias_True": numeric_optics.para.bias,
             "Bias_False": numeric_optics.para.bias,
             "Layer_Dense": self.layer_dense,
-            "Network_Dense_Start": (lambda af, wf, s, l: l),
-            "Network_Dense": (lambda af, wf, m, n, s1, s2, s3, layer, model: layer >> model),
-            "Learner": (lambda n, s, lr, lrf, lf, uf, af, wf, rate, loss, upd, net:
+            "Network_Dense_Start": (lambda af, al, wf, wl, s, l: l),
+            "Network_Dense_Cons": (lambda af, atl, al, wf, wtl, wl, m, n, s1, s2, s3, layer, model: layer >> model),
+            "Learner_Dense": (lambda n, s, lr, lrf, lf, uf, al, wl, rate, loss, upd, net:
                         (supervised_step(net, upd, loss, rate), net)),
         }
     
-    def build_pytorch(self, n, s, lr, lrf, lf, uf, af, wf, rate, loss, upd, net):
+    def build_pytorch(self, n, s, lr, lrf, lf, uf, al, wl, rate, loss, upd, net):
         class IrisExample(nn.Module):
             def __init__(self, input_, output_):
                 super(IrisExample, self).__init__()
@@ -199,8 +225,8 @@ class Linear_Repository:
             "Bias_True": True,
             "Bias_False": False,
             "Layer_Dense": self.build_linear, #(lambda shape, af, wf, activation, weights, bias:  ([nn.Linear(shape[0], shape[1], bias=bias), activation], [weights])), # nn.Sequential(nn.Linear(shape[0], shape[1], bias=bias)).apply(weights).append(activation) ),#
-            "Network_Dense_Start": (lambda af, wf, s, l: l),
-            "Network_Dense": (lambda af, wf, m, n, s1, s2, s3, layer, model: layer.append(model)), #(layer[0] + model[0], layer[1] + model[1])), #
-            "Learner": self.build_pytorch,
+            "Network_Dense_Start": (lambda af, al, wf, wl, s, l: l),
+            "Network_Dense_Cons": (lambda af, atl, al, wf, wtl, wl, m, n, s1, s2, s3, layer, model: layer.append(model)), #(layer[0] + model[0], layer[1] + model[1])), #
+            "Learner_Dense": self.build_pytorch,
         }
 

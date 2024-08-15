@@ -30,13 +30,14 @@ def main(iris_data) -> None:
 
     base = Linear_Repository([-0.01], 4, 3,
                              [0, 1, 2], [*range(15, 25, 1)],
-                             train_input, train_labels)
+                             [["Sigmoid", "Sigmoid", "Sigmoid"], ["ReLu", "ReLu", "ReLu"]],
+                             [["Normal", "Normal", "Normal"]])
 
     print(base.delta())
 
     print("#############################\n#############################\n\n")
 
-    target = Constructor("Learner", Literal((4, 3), "shape"))
+    target = Constructor("Learner", Literal((4, 3), "shape") & Literal(0, "layer"))
 
     print(f"target: {target}")
 
