@@ -204,7 +204,7 @@ class Base_Repository:
                 #     if isinstance(l, nn.Linear):
                 #         w(l.weight.data)
                 print(net)
-                self.layers = nn.Sequential(*net)    
+                self.layers = net    
 
 
             def forward(self, x):
@@ -215,7 +215,7 @@ class Base_Repository:
     def build_linear(self, shape, af, wf, activation, weights, bias):
         layer = nn.Linear(shape[0], shape[1], bias=bias)
         weights(layer.weight.data)
-        return [layer, activation]
+        return nn.Sequential(layer, activation)
     
     #TODO: RDA is now torch.SGD, update repository!
     
