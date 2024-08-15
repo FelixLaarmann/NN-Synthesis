@@ -200,16 +200,22 @@ class Base_Repository:
             def __init__(self, input_, output_):
                 super(IrisExample, self).__init__()
                 
-                for l, w in zip(net[0], net[1]):
-                    if isinstance(l, nn.Linear):
-                        w(l.weight.data)
-                self.layers = nn.Sequential(*net[0])    
+                # for l, w in zip(net[0], net[1]):
+                #     if isinstance(l, nn.Linear):
+                #         w(l.weight.data)
+                print(net)
+                self.layers = nn.Sequential(*net)    
 
 
             def forward(self, x):
                 return self.layers(x)
         model = IrisExample(s[0], s[1])
         return model, loss, upd(model.parameters(), rate)
+    
+    def build_linear(self, shape, af, wf, activation, weights, bias):
+        layer = nn.Linear(shape[0], shape[1], bias=bias)
+        weights(layer.weight.data)
+        return [layer, activation]
     
     #TODO: RDA is now torch.SGD, update repository!
     
@@ -230,9 +236,9 @@ class Base_Repository:
             "Weights_Initial_Glotrot": nn.init.xavier_normal_,
             "Bias_True": True,
             "Bias_False": False,
-            "Layer_Dense": (lambda shape, af, wf, activation, weights, bias:  ([nn.Linear(shape[0], shape[1], bias=bias), activation], [weights])), # nn.Sequential(nn.Linear(shape[0], shape[1], bias=bias)).apply(weights).append(activation) ),#
+            "Layer_Dense": self.build_linear, #(lambda shape, af, wf, activation, weights, bias:  ([nn.Linear(shape[0], shape[1], bias=bias), activation], [weights])), # nn.Sequential(nn.Linear(shape[0], shape[1], bias=bias)).apply(weights).append(activation) ),#
             "Network_Dense_Start": (lambda af, wf, s, l: l),
-            "Network_Dense": (lambda af, wf, m, n, s1, s2, s3, layer, model: (layer[0] + model[0], layer[1] + model[1])), # layer.append(model)), 
+            "Network_Dense": (lambda af, wf, m, n, s1, s2, s3, layer, model: layer.append(model)), #(layer[0] + model[0], layer[1] + model[1])), #
             "Learner": self.build_pytorch,
             "Experiment": (lambda n, s, lr, lrf, lf, uf, af, wf, x: x),
         }
