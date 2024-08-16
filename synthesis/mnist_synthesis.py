@@ -28,22 +28,28 @@ from synthesis.convolutional_repository import Convolutional_Repository
 
 
 def main() -> None:
-    print("NOTE: ensure you run ./get-mnist-dataset.sh to download the MNIST dataset first, otherwise this may hang trying to download it!")
+    print(
+        "NOTE: ensure you run ./get-mnist-dataset.sh to download the MNIST dataset first, otherwise this may hang trying to download it!")
     (x_train, y_train), (x_test, y_test) = load_mnist()
 
-    base = Linear_Repository([-0.01], 5*5*5, 10,
+    base = Linear_Repository([-0.01], 5 * 5 * 5, 10,
                              [0], [],
                              [["Sigmoid", "Sigmoid", "Sigmoid"], ["ReLu", "ReLu", "ReLu"], ["ReLu", "ReLu", "Sigmoid"]],
                              [["Normal", "Normal", "Normal"]])
 
     conv = Convolutional_Repository(base, [5], [(3, 3), (4, 4)], (28, 28), [1, 3, 5], [(2, 2)])
 
+    print(conv.delta())
+
     print("#############################\n#############################\n\n")
 
-    target = (Constructor("Learner") &
-              Constructor("Dense", Literal(0, "layer") & Literal((5*5*5, 10), "shape")) &
+    target = (Constructor("Model_Convolutional", Literal(2, "convolutional_layer") & Literal(((13, 13, 5), (5, 5, 5)), "convolutional_shape")) &
+              Constructor("Model_Dense",  Literal(0, "layer") & Literal((125, 10), "shape") & Literal(("Sigmoid",), "activation_list") & Literal(("Normal",), "initialization_list")))
+
+    target2 = (Constructor("Learner") &
+              Constructor("Dense", Literal(0, "layer") & Literal((5 * 5 * 5, 10), "shape")) &
               Constructor("Convolutional", Literal(5, "convolutional_layer") &
-                          Literal(((28, 28, 1), (5, 5, 5)), "convolutional_shape") &
+                          Literal(((5, 5, 5), (5, 5, 5)), "convolutional_shape") &
                           Literal(("ReLu", "ReLu", "Sigmoid"), "activation_list")))
 
     print(f"target: {target}")
@@ -84,6 +90,7 @@ def main() -> None:
         acc = accuracy(predict, x_test, y_test.argmax(axis=1))
         print('final accuracy: {0:.4f}'.format(acc))
         term_number = term_number + 1
+
 
 if __name__ == "__main__":
     main()

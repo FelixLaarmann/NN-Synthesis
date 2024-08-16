@@ -46,7 +46,7 @@ class Convolutional_Repository:
 
     def delta(self) -> dict[str, list[Any]]:
         return self.base_repo.delta() | {
-            "convolutional_shape": self.convolutional_shapes,
+            "convolutional_shape": [((28,28,1), (26,26,3)), ((26,26,3), (13,13,3)), ((13,13,3), (10,10,5)), ((10,10,5), (5,5,5)), ((5,5,5), (5,5,5))], #self.convolutional_shapes,
             "kernel_shape": self.kernel_shapes,
             "pool_size": self.pool_sizes,
             "convolutional_layer": self.max_layers
@@ -93,9 +93,7 @@ class Convolutional_Repository:
             "Flatten": DSL()
             .Use("cs", "convolutional_shape")
             .With(lambda cs: cs[0] == cs[1])
-            .Use("s", "shape")
-            .As(lambda cs: (cs[0][0] * cs[0][1] * cs[0][2], cs[1][0] * cs[1][1] * cs[1][2]))
-            .In(Constructor("Layer") & Constructor("Flatten", LVar("cs") & LVar("s"))),
+            .In(Constructor("Layer") & Constructor("Flatten", LVar("cs"))),
 
             "Network_Convolutional_Cons_Flatten": DSL()
             #.Use("m", "layer")
@@ -108,10 +106,11 @@ class Convolutional_Repository:
             .Use("p", "pool_size")
             .Use("al", "activation_list")
             .Use("wl", "initialization_list")
-            .Use("layer", Constructor("Layer") & Constructor("Flatten", LVar("cs") & LVar("s")))
+            .Use("layer", Constructor("Layer") & Constructor("Flatten", LVar("cs")))
             .Use("model", Constructor("Model_Dense", LVar("n") & LVar("s") & LVar("al") & LVar("wl")))
-            .In(Constructor("Model_Convolutional", Literal(0, "convolutional_layer") & LVar("cs") & LVar("s") &
-                            LVar("k") & LVar("p") & LVar("al") & LVar("wl")) &
+            .In(Constructor("Model_Convolutional", Literal(0, "convolutional_layer") & LVar("cs") &
+                            LVar("k") & LVar("p") & LVar("al") & LVar("wl"))
+                &
                 Constructor("Model_Dense", LVar("n") & LVar("s") & LVar("al") & LVar("wl"))),
 
             "Network_Convolutional_Cons_MaxPool": DSL()
@@ -217,7 +216,7 @@ class Convolutional_Repository:
             "Layer_max_pool_2d": (lambda cs, p: max_pool_2d(p[0], p[1])),
             "Flatten": (lambda cs, s: flatten),
             "Network_Convolutional_Cons_Flatten": (lambda m, n, cs, s, k, p, af, wf, layer, model: layer >> model),
-            "Network_Convolutional_Cons_MaxPool": (lambda m,n, s1, s2, s3, k, p, af, wf, layer, model: layer >> model),
+            "Network_Convolutional_Cons_MaxPool": (lambda m, n, n_dense, s1, s2, s3, k, p, al, wl, ad, wd, s, layer, model: layer >> model),
             "Network_Convolutional_Cons_Correlate":
                 (lambda m, n, s1, s2, s3, k, p, af, wf, layer, model: layer >> model),
             "Learner_Convolutional": (lambda n, m, s, cs, lr, lrf, lf, uf, al, wl, ad, wf, rate, loss, upd, net:
