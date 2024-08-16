@@ -151,8 +151,8 @@ class Linear_Repository:
             .Use("upd", Constructor("Update", LVar("uf")))
             .Use("net", Constructor("Model_Dense", LVar("n") & LVar("s") & LVar("al") & LVar("wl")))
             .In(Constructor("Learner",
-                            LVar("lrf") & LVar("lr") & LVar("lf") & LVar("uf") &
-                            LVar("n") & LVar("s") & LVar("al") & LVar("wl"))),
+                            LVar("lrf") & LVar("lr") & LVar("lf") &
+                            LVar("uf")) & Constructor("Dense", LVar("n") & LVar("s") & LVar("al") & LVar("wl"))),
         }
 
     @staticmethod
@@ -165,7 +165,7 @@ class Linear_Repository:
             #"Learning_Rate_RDA": (lambda n: to_para(rda_learning_rate(n))),
             "Loss_MSE": Para(mse_loss),
             "Loss_CEL": Para(mse_loss),
-            "Update_SGD": rda,
+            "Update_SGD": rda_momentum(-0.1),
             # "Update_RDA_Momentum": rda_momentum(-0.1),
             # "Update_GradientDescent": gd(-0.01),
             # "Update_GradientDescent_Momentum": momentum(-0.01, -0.1),
@@ -180,7 +180,7 @@ class Linear_Repository:
             "Network_Dense_Start": (lambda af, al, wf, wl, s, l: l),
             "Network_Dense_Cons": (lambda af, atl, al, wf, wtl, wl, m, n, s1, s2, s3, layer, model: layer >> model),
             "Learner_Dense": (lambda n, s, lr, lrf, lf, uf, al, wl, rate, loss, upd, net:
-                        (supervised_step(net, upd, loss, rate), net)),
+                              (supervised_step(net, upd, loss, rate), net)),
         }
     
     def build_pytorch(self, n, s, lr, lrf, lf, uf, al, wl, rate, loss, upd, net):
@@ -226,7 +226,7 @@ class Linear_Repository:
             "Bias_False": False,
             "Layer_Dense": self.build_linear, #(lambda shape, af, wf, activation, weights, bias:  ([nn.Linear(shape[0], shape[1], bias=bias), activation], [weights])), # nn.Sequential(nn.Linear(shape[0], shape[1], bias=bias)).apply(weights).append(activation) ),#
             "Network_Dense_Start": (lambda af, al, wf, wl, s, l: l),
-            "Network_Dense_Cons": (lambda af, atl, al, wf, wtl, wl, m, n, s1, s2, s3, layer, model: layer.append(model)), #(layer[0] + model[0], layer[1] + model[1])), #
+            "Network_Dense_Cons": (lambda af, atl, al, wf, wtl, wl, m, n, s1, s2, s3, layer, model: layer.extend(model)), #(layer[0] + model[0], layer[1] + model[1])), #
             "Learner_Dense": self.build_pytorch,
         }
 

@@ -50,7 +50,7 @@ def main(iris_data) -> None:
 
     print("#############################\n#############################\n\n")
 
-    target = Constructor("Learner", Literal((4, 3), "shape"))
+    target = Constructor("Learner") & Constructor("Dense", Literal((4, 3), "shape") & Literal(0, "layer"))
 
     print(f"target: {target}")
 
