@@ -47,7 +47,7 @@ class Convolutional_Repository:
     def delta(self) -> dict[str, list[Any]]:
         return {
             # TODO: convolutional shapes are infeasably large and make synthesis impossible. Find clever ways to restrict this set
-            "convolutional_shape":  [((28,28,1), (26,26,3)), ((28,28,1), (5,5,5)), ((26,26,3), (13,13,3)), ((26,26,3), (5,5,5)),  ((13, 13, 3), (5, 5, 5)), ((13,13,3), (10,10,5)), ((10,10,5), (5,5,5)), ((5,5,5), (5,5,5))], #self.convolutional_shapes,
+            "convolutional_shape": [((28,28,1), (26,26,3)), ((28,28,1), (5,5,5)), ((26,26,3), (13,13,3)), ((26,26,3), (5,5,5)),  ((13, 13, 3), (5, 5, 5)), ((13,13,3), (10,10,5)), ((10,10,5), (5,5,5)), ((5,5,5), (5,5,5))], #self.convolutional_shapes,
             "kernel_shape": self.kernel_shapes,
             "pool_size": self.pool_sizes,
             "convolutional_layer": self.max_layers
@@ -121,13 +121,18 @@ class Convolutional_Repository:
             .As(lambda m: m - 1)
             .Use("n_dense", "layer")
             #.With(lambda m, n_dense: n_dense < m)
-            .Use("s1", "convolutional_shape")
-            .Use("s2", "convolutional_shape")
-            .Use("s3", "convolutional_shape")
+            #.Use("s1", "convolutional_shape")
+            #.Use("s2", "convolutional_shape")
+            #.Use("s3", "convolutional_shape")
             #TODO: compute s1 and s2 from s3 and p, because we can infer the cut type from maxpool shape computation using its pool size
-            .With(lambda s1, s2, s3: s3[0] == s1[0] and s1[1] == s2[0] and s3[1] == s2[1])
+            #.With(lambda s1, s2, s3: s3[0] == s1[0] and s1[1] == s2[0] and s3[1] == s2[1])
             #.Use("k", "kernel_shape")
             .Use("p", "pool_size")
+            .Use("s3", "convolutional_shape")
+            .Use("s1", "convolutional_shape")
+            .As(lambda p, s3: (s3[0], (s3[0][0] // p[0], s3[0][1] // p[1], s3[0][2])))
+            .Use("s2", "convolutional_shape")
+            .As(lambda s3, s1: (s1[1], s3[1]))
             .Use("al", "activation_list")
             .Use("wl", "initialization_list")
             .Use("ad", "activation_list")
@@ -151,12 +156,18 @@ class Convolutional_Repository:
             .As(lambda m: m - 1)
             .Use("n_dense", "layer")
             #.With(lambda m, n_dense: n_dense < m)
-            .Use("s1", "convolutional_shape")
-            .Use("s2", "convolutional_shape")
-            .Use("s3", "convolutional_shape")
-            # TODO: compute s1 and s2 from s3 and k, because we can infer the cut type from correlate_2D shape computation using its kernel
-            .With(lambda s1, s2, s3: s1[0] == s3[0] and s1[1] == s2[0] and s2[1] == s3[1])
+            #.Use("s1", "convolutional_shape")
+            #.Use("s2", "convolutional_shape")
+            #.Use("s3", "convolutional_shape")
+            # TODO: compute s1 and s2 from s3 and k, because we can infer the cut type from correlate_2D shape computation using its kernel ----> This is not as easy, as I thought, because a correlate layer can change channels and these can't be computed from kernels alone
+            #.With(lambda s1, s2, s3: s1[0] == s3[0] and s1[1] == s2[0] and s2[1] == s3[1])
             .Use("k", "kernel_shape")
+            .Use("s3", "convolutional_shape")
+            .Use("s1", "convolutional_shape")
+            # TODO: Ask Andreas about relation between input and output channels of a convolutional layer. This +2 comes from exoeriments.convolutional
+            .As(lambda k, s3: (s3[0], (s3[0][0] - k[0] + 1, s3[0][1] - k[1] + 1, s3[0][2] + 2)))
+            .Use("s2", "convolutional_shape")
+            .As(lambda s3, s1: (s1[1], s3[1]))
             #.Use("p", "pool_size")
             .Use("af", "activation_feature")
             .Use("atl", "activation_list")

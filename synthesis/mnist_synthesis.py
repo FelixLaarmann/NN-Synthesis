@@ -58,12 +58,14 @@ def main() -> None:
               Constructor("Dense", Literal(0, "layer") & Literal((125, 10), "shape") & Literal(("Sigmoid",), "activation_list") & Literal(("Normal",), "initialization_list")) &
               Constructor("Convolutional", Literal(4, "convolutional_layer") &
                           Literal(((28, 28, 1), (5, 5, 5)), "convolutional_shape") &
-                          Literal(("ReLu", "ReLu", "Sigmoid"), "activation_list") &
+                          Literal(("ReLu", "ReLu", "Sigmoid",), "activation_list") &
                           Literal(("Normal", "Normal", "Normal",), "initialization_list")))
 
     print(f"target: {target}")
 
     fcl = FiniteCombinatoryLogic((base.gamma() | conv.gamma()), Subtypes({}), (base.delta() | conv.delta()))
+
+    #print(fcl.literals)
 
     results = fcl.inhabit(target)
 
