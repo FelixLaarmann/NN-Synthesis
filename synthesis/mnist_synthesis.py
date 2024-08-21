@@ -39,18 +39,27 @@ def main() -> None:
 
     conv = Convolutional_Repository(base, [5], [(3, 3), (4, 4)], (28, 28), [1, 3, 5], [(2, 2)])
 
-    print(conv.delta())
+    #print((base.delta() | conv.delta()))
 
     print("#############################\n#############################\n\n")
 
-    target = (Constructor("Model_Convolutional", Literal(2, "convolutional_layer") & Literal(((13, 13, 5), (5, 5, 5)), "convolutional_shape")) &
+    target1 = Constructor("Layer") & Constructor("Correlate_2D", Literal(((13, 13, 5), (10, 10, 5)), "convolutional_shape") & Literal((4,4), "kernel_shape") & Literal("ReLu", "activation_feature") & Literal("Normal", "initialization_feature"))
+
+    target2 = (Constructor("Model_Convolutional", Literal(1, "convolutional_layer") & Literal(((10, 10, 5), (5, 5, 5)),"convolutional_shape") & Literal(("Sigmoid",), "activation_list") & Literal(("Normal",), "initialization_list")) &
+               Constructor("Model_Dense", Literal(0, "layer") & Literal((125, 10), "shape") & Literal(("Sigmoid",), "activation_list") & Literal(("Normal",), "initialization_list")))
+
+    target3 = (Constructor("Model_Convolutional", Literal(2, "convolutional_layer") & Literal(((13, 13, 3), (5, 5, 5)), "convolutional_shape") & Literal(("ReLu", "Sigmoid",), "activation_list") & Literal(("Normal", "Normal",), "initialization_list")) &
               Constructor("Model_Dense",  Literal(0, "layer") & Literal((125, 10), "shape") & Literal(("Sigmoid",), "activation_list") & Literal(("Normal",), "initialization_list")))
 
-    target2 = (Constructor("Learner") &
-              Constructor("Dense", Literal(0, "layer") & Literal((5 * 5 * 5, 10), "shape")) &
-              Constructor("Convolutional", Literal(5, "convolutional_layer") &
-                          Literal(((5, 5, 5), (5, 5, 5)), "convolutional_shape") &
-                          Literal(("ReLu", "ReLu", "Sigmoid"), "activation_list")))
+    target4 = (Constructor("Model_Convolutional", Literal(3, "convolutional_layer") & Literal(((26, 26, 3), (5, 5, 5)), "convolutional_shape") & Literal(("ReLu", "Sigmoid",), "activation_list") & Literal(("Normal", "Normal",), "initialization_list")) &
+               Constructor("Model_Dense", Literal(0, "layer") & Literal((125, 10), "shape") & Literal(("Sigmoid",),"activation_list") & Literal(("Normal",), "initialization_list")))
+
+    target = (Constructor("Learner") &
+              Constructor("Dense", Literal(0, "layer") & Literal((125, 10), "shape") & Literal(("Sigmoid",), "activation_list") & Literal(("Normal",), "initialization_list")) &
+              Constructor("Convolutional", Literal(4, "convolutional_layer") &
+                          Literal(((28, 28, 1), (5, 5, 5)), "convolutional_shape") &
+                          Literal(("ReLu", "ReLu", "Sigmoid"), "activation_list") &
+                          Literal(("Normal", "Normal", "Normal",), "initialization_list")))
 
     print(f"target: {target}")
 

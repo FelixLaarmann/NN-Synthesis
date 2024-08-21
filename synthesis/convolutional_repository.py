@@ -45,8 +45,9 @@ class Convolutional_Repository:
         self.max_layers = [*range(0, self.min_layers, 1)] + convolutional_layers
 
     def delta(self) -> dict[str, list[Any]]:
-        return self.base_repo.delta() | {
-            "convolutional_shape": [((28,28,1), (26,26,3)), ((26,26,3), (13,13,3)), ((13,13,3), (10,10,5)), ((10,10,5), (5,5,5)), ((5,5,5), (5,5,5))], #self.convolutional_shapes,
+        return {
+            # TODO: convolutional shapes are infeasably large and make synthesis impossible. Find clever ways to restrict this set
+            "convolutional_shape":  [((28,28,1), (26,26,3)), ((28,28,1), (5,5,5)), ((26,26,3), (13,13,3)), ((26,26,3), (5,5,5)),  ((13, 13, 3), (5, 5, 5)), ((13,13,3), (10,10,5)), ((10,10,5), (5,5,5)), ((5,5,5), (5,5,5))], #self.convolutional_shapes,
             "kernel_shape": self.kernel_shapes,
             "pool_size": self.pool_sizes,
             "convolutional_layer": self.max_layers
@@ -102,14 +103,15 @@ class Convolutional_Repository:
             .Use("cs", "convolutional_shape")
             .Use("s", "shape")
             .With(lambda cs, s: cs[1][0] * cs[1][1] * cs[1][2] == s[0])
-            .Use("k", "kernel_shape")
-            .Use("p", "pool_size")
+            #.Use("k", "kernel_shape")
+            #.Use("p", "pool_size")
             .Use("al", "activation_list")
             .Use("wl", "initialization_list")
             .Use("layer", Constructor("Layer") & Constructor("Flatten", LVar("cs")))
             .Use("model", Constructor("Model_Dense", LVar("n") & LVar("s") & LVar("al") & LVar("wl")))
             .In(Constructor("Model_Convolutional", Literal(0, "convolutional_layer") & LVar("cs") &
-                            LVar("k") & LVar("p") & LVar("al") & LVar("wl"))
+                            #LVar("k") & LVar("p") &
+                            LVar("al") & LVar("wl"))
                 &
                 Constructor("Model_Dense", LVar("n") & LVar("s") & LVar("al") & LVar("wl"))),
 
@@ -118,12 +120,13 @@ class Convolutional_Repository:
             .Use("n", "convolutional_layer")
             .As(lambda m: m - 1)
             .Use("n_dense", "layer")
-            .With(lambda m, n_dense: n_dense < m)
+            #.With(lambda m, n_dense: n_dense < m)
             .Use("s1", "convolutional_shape")
             .Use("s2", "convolutional_shape")
             .Use("s3", "convolutional_shape")
+            #TODO: compute s1 and s2 from s3 and p, because we can infer the cut type from maxpool shape computation using its pool size
             .With(lambda s1, s2, s3: s3[0] == s1[0] and s1[1] == s2[0] and s3[1] == s2[1])
-            .Use("k", "kernel_shape")
+            #.Use("k", "kernel_shape")
             .Use("p", "pool_size")
             .Use("al", "activation_list")
             .Use("wl", "initialization_list")
@@ -133,11 +136,13 @@ class Convolutional_Repository:
             .With(lambda wl, wd: wd in tails(wl))
             .Use("s", "shape")
             .Use("layer", Constructor("Layer") & Constructor("Max_Pool_2D", LVar("s1") & LVar("p")))
-            .Use("model", Constructor("Model_Convolutional", LVar("n") & LVar("s2") & LVar("k") & LVar("p") &
+            .Use("model", Constructor("Model_Convolutional", LVar("n") & LVar("s2") & #LVar("k") & LVar("p") &
                                       LVar("al") & LVar("wl")) &
                  Constructor("Model_Dense", LVar("n_dense") & LVar("s") & LVar("ad") & LVar("wd")))
             .In(Constructor("Model_Convolutional", LVar("m") & LVar("s3") &
-                            LVar("k") & LVar("p") & LVar("al") & LVar("wl")) &
+                            #LVar("k") & LVar("p") &
+                            LVar("al") & LVar("wl"))
+                &
                 Constructor("Model_Dense", LVar("n_dense") & LVar("s") & LVar("ad") & LVar("wd"))),
 
             "Network_Convolutional_Cons_Correlate": DSL()
@@ -145,13 +150,14 @@ class Convolutional_Repository:
             .Use("n", "convolutional_layer")
             .As(lambda m: m - 1)
             .Use("n_dense", "layer")
-            .With(lambda m, n_dense: n_dense < m)
+            #.With(lambda m, n_dense: n_dense < m)
             .Use("s1", "convolutional_shape")
             .Use("s2", "convolutional_shape")
             .Use("s3", "convolutional_shape")
-            .With(lambda s1, s2, s3: s3[0] == s1[0] and s1[1] == s2[0] and s3[1] == s2[1])
+            # TODO: compute s1 and s2 from s3 and k, because we can infer the cut type from correlate_2D shape computation using its kernel
+            .With(lambda s1, s2, s3: s1[0] == s3[0] and s1[1] == s2[0] and s2[1] == s3[1])
             .Use("k", "kernel_shape")
-            .Use("p", "pool_size")
+            #.Use("p", "pool_size")
             .Use("af", "activation_feature")
             .Use("atl", "activation_list")
             .Use("al", "activation_list")
@@ -169,15 +175,18 @@ class Convolutional_Repository:
                                                              LVar("s1") & LVar("k") &
                                                              LVar("af") & LVar("wf")))
             .Use("model", Constructor("Model_Convolutional", LVar("n") & LVar("s2") &
-                                      LVar("k") & LVar("p") & LVar("atl") & LVar("wtl")) &
+                                      #LVar("k") & LVar("p") &
+                                      LVar("atl") & LVar("wtl")) &
                  Constructor("Model_Dense", LVar("n_dense") & LVar("s") & LVar("ad") & LVar("wd")))
             .In(Constructor("Model_Convolutional", LVar("m") & LVar("s3") &
-                            LVar("k") & LVar("p") & LVar("al") & LVar("wl")) &
+                            #LVar("k") & LVar("p") &
+                            LVar("al") & LVar("wl"))
+                &
                 Constructor("Model_Dense", LVar("n_dense") & LVar("s") & LVar("ad") & LVar("wd"))),
 
             "Learner_Convolutional": DSL()
             .Use("n", "convolutional_layer")
-            .With(lambda n: n >= self.min_layers)
+            #.With(lambda n: n >= self.min_layers)
             .Use("n_dense", "layer")
             .Use("s", "shape")
             .Use("cs", "convolutional_shape")
@@ -191,8 +200,8 @@ class Convolutional_Repository:
             .With(lambda al, ad: ad in tails(al))
             .Use("wd", "initialization_list")
             .With(lambda wl, wd: wd in tails(wl))
-            .Use("k", "kernel_shape")
-            .Use("p", "pool_size")
+            #.Use("k", "kernel_shape")
+            #.Use("p", "pool_size")
             .Use("rate", Constructor("Learning_Rate", LVar("lrf") & LVar("lr")))
             .Use("loss", Constructor("Loss", LVar("lf")))
             .Use("upd", Constructor("Update", LVar("uf")))
@@ -202,7 +211,8 @@ class Convolutional_Repository:
                             LVar("lrf") & LVar("lr") & LVar("lf") &
                             LVar("uf")) &
                 Constructor("Dense", LVar("n_dense") & LVar("s") & LVar("ad") & LVar("wd")) &
-                Constructor("Convolutional", LVar("n") & LVar("cs") & LVar("k") & LVar("p") & LVar("al") & LVar("wl"))),
+                Constructor("Convolutional", LVar("n") & LVar("cs") & #LVar("k") & LVar("p") &
+                            LVar("al") & LVar("wl"))),
         }
 
     def para_lens_algebra(self):
@@ -214,11 +224,11 @@ class Convolutional_Repository:
                                         ParaInit(lambda: weights((cs[1][2],) + k + (cs[0][2],)),
                                                  Para(convolution.multicorrelate)) >> bias(cs[1][2]) >> activation),
             "Layer_max_pool_2d": (lambda cs, p: max_pool_2d(p[0], p[1])),
-            "Flatten": (lambda cs, s: flatten),
-            "Network_Convolutional_Cons_Flatten": (lambda m, n, cs, s, k, p, af, wf, layer, model: layer >> model),
-            "Network_Convolutional_Cons_MaxPool": (lambda m, n, n_dense, s1, s2, s3, k, p, al, wl, ad, wd, s, layer, model: layer >> model),
+            "Flatten": (lambda cs: flatten),
+            "Network_Convolutional_Cons_Flatten": (lambda n, cs, s, al, wl, layer, model: layer >> model),
+            "Network_Convolutional_Cons_MaxPool": (lambda m, n, n_dense, s1, s2, s3, p, al, wl, ad, wd, s, layer, model: layer >> model),
             "Network_Convolutional_Cons_Correlate":
-                (lambda m, n, s1, s2, s3, k, p, af, wf, layer, model: layer >> model),
-            "Learner_Convolutional": (lambda n, m, s, cs, lr, lrf, lf, uf, al, wl, ad, wf, rate, loss, upd, net:
+                (lambda m, n, n_dense, s1, s2, s3, k, af, atl, al, wf, wtl, wl, ad, wd, s, layer, model: layer >> model),
+            "Learner_Convolutional": (lambda n, m, s, cs, lr, lrf, lf, uf, al, wl, ad, wd, rate, loss, upd, net:
                                       (supervised_step(net, upd, loss, rate), net))
         }
