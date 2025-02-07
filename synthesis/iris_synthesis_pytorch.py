@@ -6,6 +6,9 @@ import numpy as np
 import argparse
 from synthesis.linear_repository import Linear_Repository
 
+import torch 
+import torch.nn as nn 
+
 from experiments.dataset import load_iris
 
 import numeric_optics.lens as lens
@@ -24,12 +27,22 @@ from clsp import (
 from clsp.types import Literal
 from clsp.enumeration import interpret_term, enumerate_terms
 
+EPOCHS = 100
+
 def main(iris_data) -> None:
     # Load data from CSV
     train_input, train_labels = load_iris(iris_data)
+    x_train_tensor = torch.tensor(train_input)
+    y_train_tensor = torch.tensor(train_labels)
 
-    base = Linear_Repository([-0.01], 4, 3,
-                             [0, 1, 2], [*range(15, 25, 1)],
+
+    train_dataset = torch.utils.data.TensorDataset(x_train_tensor, y_train_tensor)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=8)
+
+
+
+    base = Linear_Repository([0.01], 4, 3,
+                           [0, 1], [*range(15, 25, 1)],
                              [["Sigmoid", "Sigmoid", "Sigmoid"], ["ReLu", "ReLu", "ReLu"]],
                              [["Normal", "Normal", "Normal"]])
 
@@ -57,20 +70,20 @@ def main(iris_data) -> None:
         print("Term: \n")
         print(t)
         print("\n")
-        (step, param), model = interpret_term(t, base.para_lens_algebra())
-        e_prev = None
-        fwd = model.arrow.arrow.fwd
-        for e, j, i, param in train_supervised(step, param, train_input, train_labels, num_epochs=400,
-                                               shuffle_data=True):
-            # print accuracy diagnostic every epoch
-            if e == e_prev:
-                continue
+        model, criterion, optimizer = interpret_term(t, base.pytorch_algebra())
+        
+        for epoch in range (EPOCHS):
+            for i, (data, label) in enumerate(train_loader):
+                data = data.float()
+                label = label.float()
+                output = model(data)
+                loss = criterion(output, label)
 
-            e_prev = e
-            predict = lambda x: fwd((param[1], x)).argmax()
-            acc = accuracy(predict, train_input, train_labels.argmax(axis=1))
-            print('epoch', e + 1, '\ttraining accuracy {0:.4f}'.format(acc), end='\r')
-        print('epoch', e + 1, '\ttraining accuracy {0:.4f}'.format(acc))
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+        print ('Epoch [{}/{}], Loss: {:.4f}'.format(epoch+1, EPOCHS, loss.item())) 
+
         term_number = term_number + 1
 
 
